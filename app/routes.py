@@ -13,8 +13,17 @@ from sqlalchemy import text
 import os, json
 from sqlalchemy.orm import aliased
 
-def is_query(arg):
-	return arg!=" "
+def is_product_query_present(s):
+	return s!=" "
+
+def is_user_query_present(u):
+	return u!=" "
+
+def is_begin_date_query_present(b):
+	return b!=" "
+
+def is_end_date_query_present(e):
+	return e!=" "
 
 config = pdfkit.configuration(wkhtmltopdf="C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe")
 
@@ -105,16 +114,13 @@ def proizvod(name):
 	sveTvrtke=Tvrtka.query.all()
 	for tvrtka in sveTvrtke:
 		lista.append(tvrtka.name)
-	#yesterday=datetime.today() - timedelta(days = 1)
 	todays_datetime = datetime(datetime.today().year, datetime.today().month, datetime.today().day)
 	evidencijaUlaz = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='unos', Evidencija.datum_unosa >= todays_datetime).order_by(Evidencija.datum_unosa.desc()).all()
 	evidencijaIzlaz = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= todays_datetime).order_by(Evidencija.datum_unosa.desc()).all()
 	form_ulaz = UlazRobeForm()
 	form_izlaz = IzlazRobeForm()
 	form_uredi = UrediProizvodForm()
-	#form_uredi.opis_proizvoda.data=proizvod.opis_proizvoda
 	if form_ulaz.submit1.data and form_ulaz.validate():
-			#tvrtka = Tvrtka.query.filter_by(oib=form_ulaz.oib.data).first_or_404()
 			tvrtka = Tvrtka.query.filter_by(name=form_ulaz.name.data).first()
 			proizvod.kolicina += form_ulaz.promijenjena_kolicina.data
 			evidencija = Evidencija(proizvod_id=proizvod.id, tvrtka_id=tvrtka.id, promijenjena_kolicina=form_ulaz.promijenjena_kolicina.data, user_id=current_user.id, vrsta_unosa='unos', trenutna_kolicina=proizvod.kolicina)
@@ -123,7 +129,6 @@ def proizvod(name):
 			flash('Dodali ste kolicinu na stanje!')
 			return redirect(url_for('proizvod', name=proizvod.name))
 	if form_izlaz.submit2.data and form_izlaz.validate():
-			#tvrtka = Tvrtka.query.filter_by(oib=form_izlaz.oib.data).first_or_404()
 			tvrtka = Tvrtka.query.filter_by(name=form_ulaz.name.data).first()
 			proizvod.kolicina -= form_ulaz.promijenjena_kolicina.data
 			evidencija = Evidencija(proizvod_id=proizvod.id, tvrtka_id=tvrtka.id, promijenjena_kolicina=form_ulaz.promijenjena_kolicina.data, user_id=current_user.id, vrsta_unosa='izlaz', trenutna_kolicina=proizvod.kolicina)
@@ -158,7 +163,7 @@ def stanje_skladista(page_num, s):
 	for proizvod in sviProizvodi:
 		lista.append(proizvod.name)
 	
-	if not is_query(s):
+	if not is_product_query_present(s):
 		proizvodi = Proizvod.query.order_by(Proizvod.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 	elif not form.submit.data:
 		proizvodi2 = Proizvod.query.filter(Proizvod.name.like("%" + s + "%")).paginate(per_page=3, page=page_num, error_out=True)
@@ -206,12 +211,12 @@ def tvrtke(page_num, s):
 	for tvrtka in sve_tvrtke:
 		lista.append(tvrtka.name)
 
-	if not is_query(s):
+	if not is_product_query_present(s):
 		tvrtke = Tvrtka.query.order_by(Tvrtka.name).paginate(per_page=5, page=page_num, error_out=True)
 		
 	elif not form2.submit2.data:
 		tvrtke2 = Tvrtka.query.filter(Tvrtka.name.like("%" + s + "%")).paginate(per_page=3, page=page_num, error_out=True)
-		return render_template("tvrtke.html", title='Tvrtke', form=form, form2=form2, tvrtke=tvrtke2, search=s , lista=lista)
+		return render_template("tvrtke.html", title='Tvrtke', form=form, form2=form2, tvrtke=tvrtke2, search=s, lista=lista)
 	if  form2.submit2.data:
 		if form2.validate_on_submit():
 			tvrtke2 = Tvrtka.query.filter(Tvrtka.name.like("%" + form2.search.data + "%")).paginate(per_page=3, page=1, error_out=True)
@@ -226,7 +231,6 @@ def tvrtke(page_num, s):
 			db.session.commit()
 			flash(f'Uspješno ste unijeli tvrtku {form.name.data}!')
 			tvrtke = Tvrtka.query.order_by(Tvrtka.name.desc()).paginate(per_page=5, page=page_num, error_out=True)
-			#return render_template('tvrtke.html', title='Dodaj tvrtku', form=form, form2=form2, tvrtke=tvrtke, search=' ')
 		else:
 			form_error=True
 			return render_template('tvrtke.html', title='Tvrtke', tvrtke=tvrtke, form=form, form2= form2, search=' ', lista=lista, form_error=form_error)
@@ -265,7 +269,7 @@ def svi_korisnici(page_num, s):
 	sviKorisnici = User.query.all()
 	for korisnik in sviKorisnici:
 		lista.append(korisnik.username)
-	if not is_query(s):
+	if not is_product_query_present(s):
 		svi_korisnici = User.query.order_by(User.username.desc()).paginate(per_page=7, page=page_num, error_out=True)
 		
 	elif not form.submit.data:
@@ -289,62 +293,62 @@ def evidencija_unosa(page_num, s, b, e, u):
 	form = SearchFormEvidencija()
 	lista = []
 	lista2= []
-	evidencija = Evidencija.query.filter_by(vrsta_unosa='unos').order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+	scope = Evidencija.query.filter(Evidencija.vrsta_unosa=="unos")
+	evidencija = scope.order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 	sviProizvodi = Proizvod.query.all()
 	for proizvod in sviProizvodi:
 		lista.append(proizvod.name)
 	sviUseri = User.query.all()
 	for user in sviUseri:
 		lista2.append(user.username)
-	if not is_query(s):
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				evidencija = Evidencija.query.filter_by(vrsta_unosa='unos').order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+	if not is_product_query_present(s):
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				evidencija = scope.order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				evidencija = scope.filter(Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				evidencija = scope.filter(Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				evidencija = scope.filter(Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if not is_query(b) and not is_query(e):
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				evidencija = scope.query.filter(Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				evidencija = scope.filter(Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				evidencija = scope.filter(Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				evidencija = scope.filter(Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 	elif not form.submit.data:
 		proizvod = Proizvod.query.filter(Proizvod.name.like("%" + s + "%")).first()
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				evidencija = Evidencija.query.filter( Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos").order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('evidencija_unosa.html', title='Evidencija unosa', form=form, evidencija=evidencija, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if not is_query(b) and not is_query(e):
-				evidencija = Evidencija.query.filter( Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('evidencija_unosa.html', title='Evidencija unosa', form=form, evidencija=evidencija, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 	if form.submit.data:
 		if form.validate_on_submit():
 
 			proizvod = Proizvod.query.filter(Proizvod.name.like("%" + form.search.data + "%")).first()
-			#import pdb; pdb.set_trace();
 			if form.search.data != "" and form.search.data != " " and proizvod is None:
 				flash(f'Proizvod '+form.search.data+ ' ne postoji!', 'danger')
 				return redirect(url_for('evidencija_unosa1'))
@@ -356,68 +360,67 @@ def evidencija_unosa(page_num, s, b, e, u):
 				form.user.data=" "
 				if form.begin.data is None and form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=="unos").order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos").order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.end.data = ' '
 					form.user.data=' '
 				elif form.begin.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.user.data=' '
 				elif form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= form.begin.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.datum_unosa >= form.begin.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= form.begin.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= form.begin.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.end.data = ' '
 					form.user.data=' '
 				else:
 
 					form.user.data=' '
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 			else:
 				
 				if form.begin.data is None and form.end.data is None:
-					#import pdb; pdb.set_trace();
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=="unos", Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.end.data = ' '
 				elif form.begin.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 				elif form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= form.begin.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.datum_unosa >= form.begin.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= form.begin.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= form.begin.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.end.data = ' '
 				else:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 			return render_template('evidencija_unosa.html', title='Evidencija unosa', form=form, evidencija=evidencija, search=form.search.data, begin=form.begin.data, end=form.end.data, lista=lista, lista2=lista2, user=form.user.data, page=1)
 		return redirect(url_for('evidencija_unosa1'))
 	return render_template('evidencija_unosa.html', title='Evidencija unosa', form=form, evidencija=evidencija, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
@@ -433,59 +436,59 @@ def evidencija_izdavanja(page_num, s, b, e, u):
 	form = SearchFormEvidencija()
 	lista = []
 	lista2 = []
-	evidencija = Evidencija.query.filter_by(vrsta_unosa='izlaz').order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+	scope =	Evidencija.query.filter(Evidencija.vrsta_unosa=='izlaz')
+	evidencija = scope.order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 	sviProizvodi = Proizvod.query.all()
 	for proizvod in sviProizvodi:
 		lista.append(proizvod.name)
 	sviUseri = User.query.all()
 	for user in sviUseri:
 		lista2.append(user.username)
-	if not is_query(s):
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				evidencija = Evidencija.query.filter_by(vrsta_unosa='izlaz').order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+	if not is_product_query_present(s):
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				evidencija = scope.order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				evidencija = scope.filter( Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				evidencija = scope.filter( Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				evidencija = scope.filter( Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if not is_query(b) and not is_query(e):
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				evidencija = scope.filter( Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				evidencija = scope.filter( Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				evidencija = scope.filter( Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				evidencija = scope.filter( Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 	elif not form.submit.data:
 		proizvod = Proizvod.query.filter(Proizvod.name.like("%" + s + "%")).first()
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				evidencija = Evidencija.query.filter( Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz').order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				evidencija = scope.filter( Evidencija.proizvod_id==proizvod.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('evidencija_izdavanja.html', title='Evidencija izdavanja', form=form, evidencija=evidencija, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if not is_query(b) and not is_query(e):
-				evidencija = Evidencija.query.filter( Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				evidencija = scope.filter( Evidencija.proizvod_id==proizvod.id, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('evidencija_izdavanja.html', title='Evidencija izdavanja', form=form, evidencija=evidencija, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 	if form.submit.data:
-		#import pdb; pdb.set_trace();
 		if form.validate_on_submit():
 
 			proizvod = Proizvod.query.filter(Proizvod.name.like("%" + form.search.data + "%")).first()
@@ -500,67 +503,66 @@ def evidencija_izdavanja(page_num, s, b, e, u):
 				form.user.data=" "
 				if form.begin.data is None and form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=='izlaz').order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz').order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.end.data = ' '
 					form.user.data=' '
 				elif form.begin.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter( Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id,  Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.user.data=' '
 				elif form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= form.begin.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter( Evidencija.datum_unosa >= form.begin.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= form.begin.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id,  Evidencija.datum_unosa >= form.begin.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.end.data = ' '
 					form.user.data=' '
 				else:
 					form.user.data=' '
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter( Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)	
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id,  Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)	
 			else:
-				#import pdb; pdb.set_trace();
 				user = User.query.filter_by(username=form.user.data).first()
 				if form.begin.data is None and form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter( Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id,  Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.end.data = ' '
 				elif form.begin.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter( Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id,  Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 				elif form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= form.begin.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter( Evidencija.datum_unosa >= form.begin.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= form.begin.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id,  Evidencija.datum_unosa >= form.begin.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.end.data = ' '
 				else:
 					if form.search.data == "" or form.search.data == " ":
-						evidencija = Evidencija.query.filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter( Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
+						evidencija = scope.filter(Evidencija.proizvod_id==proizvod.id,  Evidencija.datum_unosa >= form.begin.data, Evidencija.datum_unosa <= form.end.data, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=1, error_out=True)
 			return render_template('evidencija_izdavanja.html', title='Evidencija izdavanja', form=form, evidencija=evidencija, search=form.search.data, begin=form.begin.data, end=form.end.data, lista=lista, lista2=lista2, user=form.user.data, page=1)
 		return redirect(url_for('evidencija_izdavanja1'))
 	return render_template('evidencija_izdavanja.html', title='Evidencija izdavanja', form=form, evidencija=evidencija, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
@@ -610,14 +612,13 @@ def edit_password(username):
 @app.route('/export_stanje_skladista')
 @login_required
 def export_stanje_skladista():
-	sql= text('SELECT proizvod.name AS Proizvod, proizvod.kolicina AS Kolicina FROM proizvod')
-	result= db.engine.execute(sql)
+	result = db.session.query(Proizvod.name.label("Proizvod"), Proizvod.kolicina.label("Količina"))
 	query_sets = []
 	for r in result:
 		query_sets.append(r)
 	column_names = [
 		'Proizvod',
-		'Kolicina'
+		'Količina'
 		]
 	return excel.make_response_from_query_sets(query_sets, column_names, 'xls')
 
@@ -626,44 +627,45 @@ def export_stanje_skladista():
 @app.route('/export_proizvod_unos/<s>+<b>+<e>+<u>')
 @login_required
 def export_proizvod_unos(s, b, e, u):
-	if not is_query(s):
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.status=="active")		
-			elif not is_query(b):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Evidencija.datum_unosa <=e, Receipt.status=="active")
-			elif not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Evidencija.datum_unosa >=b, Receipt.status=="active")
+	scope = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.status=="active")
+	if not is_product_query_present(s):
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope	
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Evidencija.datum_unosa >=b)
 			else:
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="active")
+				result = scope.filter(Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 		else:
-			if not is_query(b) and not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, User.username==u, Receipt.status=="active")		
-			elif not is_query(b):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, User.username==u, Evidencija.datum_unosa <=e, Receipt.status=="active")	
-			elif not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, User.username==u, Evidencija.datum_unosa >=b, Receipt.status=="active")				
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(User.username==u)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(User.username==u, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(User.username==u, Evidencija.datum_unosa >=b)
 			else:
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="active")
+				result = scope.filter(User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 	else:
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.status=="active")		
-			elif not is_query(b):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Evidencija.datum_unosa <=e, Receipt.status=="active")
-			elif not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Evidencija.datum_unosa >=b, Receipt.status=="active")
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa >=b)
 			else:
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="active")
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 		else:
-			if not is_query(b) and not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, User.username==u, Receipt.status=="active")		
-			elif not is_query(b):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, User.username==u, Evidencija.datum_unosa <=e, Receipt.status=="active")	
-			elif not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b, Receipt.status=="active")				
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, User.username==u)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b)
 			else:
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="active")
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 				
 
 	query_sets = []
@@ -683,60 +685,46 @@ def export_proizvod_unos(s, b, e, u):
 @app.route('/export_proizvod_unos_storno/<s>+<b>+<e>+<u>')
 @login_required
 def export_proizvod_unos_storno(s, b, e, u):
-	if not is_query(s):
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, Receipt.status=="storno")		
-			elif not is_query(b):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, Evidencija.datum_unosa <=e, Receipt.status=="storno")
-			elif not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, Evidencija.datum_unosa >=b,  Receipt.status=="storno")
+	Storno = aliased(User)
+	scope = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, Receipt.status=="storno")		
+	if not is_product_query_present(s):
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope	
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Evidencija.datum_unosa >=b)
 			else:
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="storno")
+				result = scope.filter(Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 		else:
-			if not is_query(b) and not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, User.username==u, Receipt.status=="storno")
-			elif not is_query(b):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa <=e, Receipt.status=="storno")
-			elif not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa >=b, Receipt.status=="storno")
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(User.username==u)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(User.username==u, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(User.username==u, Evidencija.datum_unosa >=b)
 			else:
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="storno")
+				result = scope.filter(User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 	else:
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, Receipt.status=="storno")
-			elif not is_query(b):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, Evidencija.datum_unosa <=e, Receipt.status=="storno")
-			elif not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, Evidencija.datum_unosa >=b, Receipt.status=="storno")
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa >=b)
 			else:
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="storno")
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 		else:
-			if not is_query(b) and not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, User.username==u, Receipt.status=="storno")
-			elif not is_query(b):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa <=e, Receipt.status=="storno")
-			elif not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa >=b, Receipt.status=="storno")				
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, User.username==u)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b)
 			else:
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='unos', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="storno")
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 
 	query_sets = []
 	for r in result:
@@ -757,47 +745,46 @@ def export_proizvod_unos_storno(s, b, e, u):
 @app.route('/export_proizvod_izlaz/<s>+<b>+<e>+<u>')
 @login_required
 def export_proizvod_izlaz(s, b, e, u):
-	if not is_query(s):
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.status=="active")		
-			elif not is_query(b):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Evidencija.datum_unosa <=e, Receipt.status=="active")
-			elif not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Evidencija.datum_unosa >=b, Receipt.status=="active")
+	scope = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.status=="active")		
+	if not is_product_query_present(s):
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope	
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Evidencija.datum_unosa >=b)
 			else:
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="active")
+				result = scope.filter(Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 		else:
-			if not is_query(b) and not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, User.username==u, Receipt.status=="active")		
-			elif not is_query(b):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, User.username==u, Evidencija.datum_unosa <=e, Receipt.status=="active")	
-			elif not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, User.username==u, Evidencija.datum_unosa >=b, Receipt.status=="active")				
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(User.username==u)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(User.username==u, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(User.username==u, Evidencija.datum_unosa >=b)
 			else:
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="active")
+				result = scope.filter(User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 	else:
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.status=="active")		
-			elif not is_query(b):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Evidencija.datum_unosa <=e, Receipt.status=="active")
-			elif not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Evidencija.datum_unosa >=b, Receipt.status=="active")
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa >=b)
 			else:
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="active")
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 		else:
-			if not is_query(b) and not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, User.username==u, Receipt.status=="active")		
-			elif not is_query(b):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, User.username==u, Evidencija.datum_unosa <=e, Receipt.status=="active")	
-			elif not is_query(e):
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b, Receipt.status=="active")				
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, User.username==u)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b)
 			else:
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="active")
-
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 	
-	#result= db.engine.execute(sql)
 	query_sets = []
 	for r in result:
 		query_sets.append(r)
@@ -815,61 +802,46 @@ def export_proizvod_izlaz(s, b, e, u):
 @app.route('/export_proizvod_izlaz_storno/<s>+<b>+<e>+<u>')
 @login_required
 def export_proizvod_izlaz_storno(s, b, e, u):
-
-	if not is_query(s):
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, Receipt.status=="storno")		
-			elif not is_query(b):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, Evidencija.datum_unosa <=e, Receipt.status=="storno")
-			elif not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, Evidencija.datum_unosa >=b,  Receipt.status=="storno")
+	Storno = aliased(User)
+	scope = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, Receipt.status=="storno")		
+	if not is_product_query_present(s):
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope	
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Evidencija.datum_unosa >=b)
 			else:
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="storno")
+				result = scope.filter(Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 		else:
-			if not is_query(b) and not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, User.username==u, Receipt.status=="storno")
-			elif not is_query(b):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa <=e, Receipt.status=="storno")
-			elif not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa >=b, Receipt.status=="storno")
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(User.username==u)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(User.username==u, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(User.username==u, Evidencija.datum_unosa >=b)
 			else:
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="storno")
+				result = scope.filter(User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 	else:
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, Receipt.status=="storno")
-			elif not is_query(b):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, Evidencija.datum_unosa <=e, Receipt.status=="storno")
-			elif not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, Evidencija.datum_unosa >=b, Receipt.status=="storno")
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa >=b)
 			else:
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="storno")
+				result = scope.filter(Proizvod.name ==s, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 		else:
-			if not is_query(b) and not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, User.username==u, Receipt.status=="storno")
-			elif not is_query(b):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa <=e, Receipt.status=="storno")
-			elif not is_query(e):
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa >=b, Receipt.status=="storno")				
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, User.username==u)
+			elif not is_begin_date_query_present(b):
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa <=e)
+			elif not is_end_date_query_present(e):
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b)
 			else:
-				Storno = aliased(User)
-				result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), User.username.label("Korisnik"), Tvrtka.name.label("Tvrtka"), Receipt.id.label("ID Racuna"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.vrsta_unosa=='izlaz', Evidencija.proizvod_id==Proizvod.id, Evidencija.tvrtka_id==Tvrtka.id, Evidencija.user_id==User.id, Evidencija.receipt_id==Receipt.id, Proizvod.name ==s, Receipt.storno_user==Storno.id, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e, Receipt.status=="storno")
+				result = scope.filter(Proizvod.name ==s, User.username==u, Evidencija.datum_unosa >=b, Evidencija.datum_unosa <=e)
 
 	query_sets = []
 	for r in result:
@@ -892,23 +864,7 @@ def export_proizvod_izlaz_storno(s, b, e, u):
 def export_receipt_unos(id):
 	receipt= Receipt.query.get(id)
 	if receipt.status == 'active':
-		sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id WHERE evidencija.receipt_id = "{}"'.format(id))
-		result= db.engine.execute(sql)
-		query_sets = []
-		for r in result:
-			query_sets.append(r)
-		column_names = [
-			'Datum Unosa',
-			'Promijenjena Kolicina',
-			'Proizvod',
-			'ID Proizvoda',
-			'Tvrtka',
-			'Korisnik'
-			]
-		return excel.make_response_from_query_sets(query_sets, column_names, 'xls', file_name="Ulazni racun "+str(id))
-	else:
-		sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.receipt_id = "{}"'.format(id))
-		result= db.engine.execute(sql)
+		result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), Tvrtka.name.label("Tvrtka"), User.username.label("Korisnik"), Receipt.id.label("ID Racuna"), Receipt.status.label("Status")).filter(Evidencija.proizvod_id == Proizvod.id, Evidencija.tvrtka_id == Tvrtka.id, Evidencija.user_id == User.id,  Evidencija.receipt_id== Receipt.id, Evidencija.receipt_id == id)
 		query_sets = []
 		for r in result:
 			query_sets.append(r)
@@ -919,6 +875,25 @@ def export_receipt_unos(id):
 			'ID Proizvoda',
 			'Tvrtka',
 			'Korisnik',
+			'ID Racuna',
+			'Status'
+			]
+		return excel.make_response_from_query_sets(query_sets, column_names, 'xls', file_name="Ulazni racun "+str(id))
+	else:
+		Storno = aliased(User)
+		result = db.session.query(Evidencija.datum_unosa.label("Datum Unosa"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), Tvrtka.name.label("Tvrtka"), User.username.label("Korisnik"), Receipt.id.label("ID Racuna"), Receipt.status.label("Status"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.proizvod_id == Proizvod.id, Evidencija.tvrtka_id == Tvrtka.id, Evidencija.user_id == User.id, Receipt.storno_user == Storno.id , Evidencija.receipt_id == Receipt.id, Evidencija.receipt_id == id)
+		query_sets = []
+		for r in result:
+			query_sets.append(r)
+		column_names = [
+			'Datum Unosa',
+			'Promijenjena Kolicina',
+			'Proizvod',
+			'ID Proizvoda',
+			'Tvrtka',
+			'Korisnik',
+			'ID Racuna',
+			'Status',
 			'Datum Storniranja',
 			'Stornirao'
 			]
@@ -929,8 +904,7 @@ def export_receipt_unos(id):
 def export_receipt_izlaz(id):
 	receipt= Receipt.query.get(id)
 	if receipt.status == 'active':
-		sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id WHERE evidencija.receipt_id = "{}"'.format(id))
-		result= db.engine.execute(sql)
+		result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), Tvrtka.name.label("Tvrtka"), User.username.label("Korisnik"), Receipt.id.label("ID Racuna"), Receipt.status.label("Status")).filter(Evidencija.proizvod_id == Proizvod.id, Evidencija.tvrtka_id == Tvrtka.id, Evidencija.user_id == User.id,  Evidencija.receipt_id== Receipt.id, Evidencija.receipt_id == id)
 		query_sets = []
 		for r in result:
 			query_sets.append(r)
@@ -944,8 +918,8 @@ def export_receipt_izlaz(id):
 			]
 		return excel.make_response_from_query_sets(query_sets, column_names, 'xls', file_name="Izlazni racun "+str(id))
 	else:
-		sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.receipt_id = "{}"'.format(id))
-		result= db.engine.execute(sql)
+		Storno = aliased(User)
+		result = db.session.query(Evidencija.datum_unosa.label("Datum Izdavanja"), Evidencija.promijenjena_kolicina.label("Promijenjena Kolicina"), Proizvod.name.label("Proizvod"), Proizvod.id.label("ID Proizvoda"), Tvrtka.name.label("Tvrtka"), User.username.label("Korisnik"), Receipt.id.label("ID Racuna"), Receipt.status.label("Status"), Receipt.storno_date.label("Datum Storniranja"), Storno.username.label("Stornirao")).filter(Evidencija.proizvod_id == Proizvod.id, Evidencija.tvrtka_id == Tvrtka.id, Evidencija.user_id == User.id, Receipt.storno_user == Storno.id , Evidencija.receipt_id == Receipt.id, Evidencija.receipt_id == id)
 		query_sets = []
 		for r in result:
 			query_sets.append(r)
@@ -993,7 +967,6 @@ def ulaz():
 					if proizvod is None:
 						flash(f'Proizvod '+productData[0]+ ' ne postoji!', 'danger')
 						error=True
-						#return redirect(url_for('ulaz'))
 					tvrtka = Tvrtka.query.filter_by(name=productData[2]).first()
 					if tvrtka is None:
 						flash(f'Tvrtka '+ productData[2]+' ne postoji!', 'danger')
@@ -1056,7 +1029,6 @@ def izlaz():
 					if proizvod is None:
 						flash(f'Proizvod '+productData[0]+ ' ne postoji!', 'danger')
 						error=True
-						#return redirect(url_for('izlaz'))
 					tvrtka = Tvrtka.query.filter_by(name=productData[2]).first()
 					if tvrtka is None:
 						flash(f'Tvrtka '+ productData[2]+' ne postoji!', 'danger')
@@ -1105,52 +1077,52 @@ def receipts_unosa(page_num, s, b, e, u):
 	sviUseri = User.query.all()
 	for user in sviUseri:
 		lista2.append(user.username)
-	if not is_query(s):
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+	scope = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active')
+	if not is_product_query_present(s):
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				receipts = scope.order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				receipts = scope.filter( Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				receipts = scope.filter( Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.date <=e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				receipts = scope.filter( Receipt.date >= b, Receipt.date <=e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if not is_query(b) and not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				receipts = scope.filter( Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				receipts = scope.filter( Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				receipts = scope.filter( Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.date <=e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				receipts = scope.filter( Receipt.date >= b, Receipt.date <=e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 	elif not form.submit.data:
 		tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= b, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('receipts_unosa.html', title='Primke', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if not is_query(b) and not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				receipts = scope.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= b, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('receipts_unosa.html', title='Primke', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 	if form.submit.data:
-		#import pdb; pdb.set_trace();
 		if form.validate_on_submit():
 			number = form.search.data
 			if number.isdigit():
@@ -1169,68 +1141,66 @@ def receipts_unosa(page_num, s, b, e, u):
 				form.user.data=" "
 				if form.begin.data is None and form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='unos').order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active').order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.end.data = ' '
 					form.user.data=' '
 				elif form.begin.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.user.data=' '
 				elif form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.end.data = ' '
 					form.user.data=' '
 				else:
 					form.user.data=' '
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)	
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)	
 			else:
-				#import pdb; pdb.set_trace();
 				user = User.query.filter_by(username=form.user.data).first()
 				if form.begin.data is None and form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
-						#import pdb; pdb.set_trace();
+						receipts = scope.filter( Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.end.data = ' '
 				elif form.begin.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 				elif form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.end.data = ' '
 				else:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 			return render_template('receipts_unosa.html', title='Primke', form=form, receipts=receipts, search=form.search.data, begin=form.begin.data, end=form.end.data, lista=lista, lista2=lista2, user=form.user.data, page=1)
 		return redirect(url_for('receipts_unosa1'))
 	return render_template('receipts_unosa.html', title='Primke', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
@@ -1245,7 +1215,6 @@ def receipts_unosa1():
 @login_required
 def receipts_izlaz(page_num, s, b, e, u):
 	form = SearchFormReceipt()
-	#receipts = Receipt.query.filter_by(receipt_type="izlaz", status="active").order_by(Receipt.date.desc()).paginate(per_page=7, page=page_num, error_out=True)
 	lista = []
 	lista2 = []
 	sveTvrtke = Tvrtka.query.all()
@@ -1254,52 +1223,52 @@ def receipts_izlaz(page_num, s, b, e, u):
 	sviUseri = User.query.all()
 	for user in sviUseri:
 		lista2.append(user.username)
-	if not is_query(s):
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+	scope = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active')
+	if not is_product_query_present(s):
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				receipts = scope.order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				receipts = scope.filter(  Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				receipts = scope.filter(  Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.date <=e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				receipts = scope.filter(  Receipt.date >= b, Receipt.date <=e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if not is_query(b) and not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				receipts = scope.filter(  Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				receipts = scope.filter(  Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				receipts = scope.filter(  Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.date <=e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				receipts = scope.filter(  Receipt.date >= b, Receipt.date <=e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 	elif not form.submit.data:
 		tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
-		if not is_query(u):
-			if not is_query(b) and not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+		if not is_user_query_present(u):
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				receipts = scope.filter( Receipt.receipt_tvrtka==tvrtka.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date >= b, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('receipts_izlaz.html', title='Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if not is_query(b) and not is_query(e):
-				receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(b):
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif not is_query(e):
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+				receipts = scope.filter( Receipt.receipt_tvrtka==tvrtka.id,  Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_begin_date_query_present(b):
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			elif not is_end_date_query_present(e):
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
-				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date >= b, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('receipts_izlaz.html', title='Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 	if form.submit.data:
-		#import pdb; pdb.set_trace();
 		if form.validate_on_submit():
 			number = form.search.data
 			if number.isdigit():
@@ -1318,69 +1287,66 @@ def receipts_izlaz(page_num, s, b, e, u):
 				form.user.data=" "
 				if form.begin.data is None and form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active').order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.end.data = ' '
 					form.user.data=' '
-					#import pdb; pdb.set_trace();
 				elif form.begin.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter( Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.user.data=' '
 				elif form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter( Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.end.data = ' '
 					form.user.data=' '
 				else:
 					form.user.data=' '
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter( Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)	
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)	
 			else:
-				#import pdb; pdb.set_trace();
 				user = User.query.filter_by(username=form.user.data).first()
 				if form.begin.data is None and form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
-						#import pdb; pdb.set_trace();
+						receipts = scope.filter(  Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 					form.end.data = ' '
 				elif form.begin.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter( Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.begin.data = ' '
 				elif form.end.data is None:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter( Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 					form.end.data = ' '
 				else:
 					if form.search.data == "" or form.search.data == " ":
-						receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = scope.filter( Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.search.data= " "
 					else:
-						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+						receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id,  Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 			return render_template('receipts_izlaz.html', title='Otpremnice', form=form, receipts=receipts, search=form.search.data, begin=form.begin.data, end=form.end.data, lista=lista, lista2=lista2, user=form.user.data, page=1)
 		return redirect(url_for('receipts_izlaz1'))
 	return render_template('receipts_izlaz.html', title='Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
@@ -1402,6 +1368,7 @@ def receipts_unosa_storno(page_num, s, b, e, u, st):
 	sviUseri = User.query.all()
 	for user in sviUseri:
 		lista2.append(user.username)
+	scope = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno')
 	if form.submit.data:
 		if form.validate_on_submit():
 			
@@ -1413,239 +1380,234 @@ def receipts_unosa_storno(page_num, s, b, e, u, st):
 			if form.search.data != "" and form.search.data != " " and tvrtka is None:
 				flash(f'Tvrtka '+form.search.data+ ' ne postoji!', 'danger')
 				return redirect(url_for('receipts_unosa_storno1'))
-				#import pdb; pdb.set_trace();
 			user = User.query.filter_by(username=form.user.data).first()
 			if form.user.data != "" and form.user.data != " " and user is None:
 				flash(f'Korisnik '+form.user.data+ ' ne postoji!', 'danger')
 				return redirect(url_for('receipts_unosa_storno1'))
-			#import pdb; pdb.set_trace();
+			
 			if form.storno.data=="aktivni":
 				if user is None:
 					form.user.data=" "
 					if form.begin.data is None and form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.end.data = ' '
 						form.user.data=' '
 					elif form.begin.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.user.data=' '
 					elif form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.end.data = ' '
 						form.user.data=' '
 					else:
 						form.user.data=' '
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)	
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)	
 				else:
-					#import pdb; pdb.set_trace();
 					user = User.query.filter_by(username=form.user.data).first()
 					if form.begin.data is None and form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
-							#import pdb; pdb.set_trace();
+							receipts = scope.filter(Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+	
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.end.data = ' '
 					elif form.begin.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 					elif form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.end.data = ' '
 					else:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 				return render_template('receipts_unosa_storno.html', title='Stornirane Primke', form=form, receipts=receipts, search=form.search.data, begin=form.begin.data, end=form.end.data, lista=lista, lista2=lista2, user=form.user.data, st=form.storno.data, page=1)
 			else:
 				if user is None:
 					form.user.data=" "
 					if form.begin.data is None and form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.end.data = ' '
 						form.user.data=' '
 					elif form.begin.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.user.data=' '
 					elif form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= form.begin.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.storno_date >= form.begin.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= form.begin.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= form.begin.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.end.data = ' '
 						form.user.data=' '
 					else:
 						form.user.data=' '
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)	
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)	
 				else:
-					#import pdb; pdb.set_trace();
 					user = User.query.filter_by(username=form.user.data).first()
 
 					if form.begin.data is None and form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter( Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.end.data = ' '
 					elif form.begin.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 					elif form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.storno_date >= form.begin.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= form.begin.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.end.data = ' '
 					else:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 				return render_template('receipts_unosa_storno.html', title='Stornirane Primke', form=form, receipts=receipts, search=form.search.data, begin=form.begin.data, end=form.end.data, lista=lista, lista2=lista2, user=form.user.data, st=form.storno.data, page=1)
-		#import pdb; pdb.set_trace();
 		return redirect(url_for('receipts_unosa_storno1'))
 	if st=='aktivni':
-		if not is_query(s):
-			if not is_query(u):
-				if not is_query(b) and not is_query(e):
+		if not is_product_query_present(s):
+			if not is_user_query_present(u):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
+				elif not is_begin_date_query_present(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
+				elif not is_end_date_query_present(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.date <=e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if not is_query(b) and not is_query(e):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
+				elif not is_begin_date_query_present(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
+				elif not is_end_date_query_present(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.date <=e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 		elif not form.submit.data:
 			tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
-			if not is_query(u):
-				if not is_query(b) and not is_query(e):
+			if not is_user_query_present(u):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
 					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
+				elif not is_begin_date_query_present(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
+				elif not is_end_date_query_present(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_unosa_storno.html', title='Stornirane Primke', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if not is_query(b) and not is_query(e):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
 					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
+				elif not is_begin_date_query_present(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
+				elif not is_end_date_query_present(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_unosa_storno.html', title='Stornirane Primke', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 	else:
-		if not is_query(s):
-			if not is_query(u):
-				if not is_query(b) and not is_query(e):
+		if not is_product_query_present(s):
+			if not is_user_query_present(u):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
+				elif not is_begin_date_query_present(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
+				elif not is_end_date_query_present(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <=e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if not is_query(b) and not is_query(e):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
+				elif not is_begin_date_query_present(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
+				elif not is_end_date_query_present(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <=e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 		elif not form.submit.data:
 			tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
-			#import pdb; pdb.set_trace()
-			if not is_query(u):
-				if not is_query(b) and not is_query(e):
+			if not is_user_query_present(u):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
 					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
+				elif not is_begin_date_query_present(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
+				elif not is_end_date_query_present(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_unosa_storno.html', title='Stornirane Primke', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if not is_query(b) and not is_query(e):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
 
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
+				elif not is_begin_date_query_present(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
+				elif not is_end_date_query_present(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
@@ -1671,9 +1633,9 @@ def receipts_izlaz_storno(page_num, s, b, e, u, st):
 	sviUseri = User.query.all()
 	for user in sviUseri:
 		lista2.append(user.username)
+	scope = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno')
 	if form.submit.data:
 		if form.validate_on_submit():
-
 			number = form.search.data
 			if number.isdigit():
 				receipts= Receipt.query.filter_by(id =number, status='storno', receipt_type='izlaz').paginate(per_page=3, page=1, error_out=True)
@@ -1682,242 +1644,235 @@ def receipts_izlaz_storno(page_num, s, b, e, u, st):
 			if form.search.data != "" and form.search.data != " " and tvrtka is None:
 				flash(f'Tvrtka '+form.search.data+ ' ne postoji!', 'danger')
 				return redirect(url_for('receipts_izlaz_storno1'))
-				#import pdb; pdb.set_trace();
 			user = User.query.filter_by(username=form.user.data).first()
 			if form.user.data != "" and form.user.data != " " and user is None:
 				flash(f'Korisnik '+form.user.data+ ' ne postoji!', 'danger')
 				return redirect(url_for('receipts_izlaz_storno1'))
-			#import pdb; pdb.set_trace();
 			if form.storno.data=="aktivni":
 				if user is None:
 					form.user.data=" "
 					if form.begin.data is None and form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.end.data = ' '
 						form.user.data=' '
 					elif form.begin.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.user.data=' '
 					elif form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.end.data = ' '
 						form.user.data=' '
 					else:
 						form.user.data=' '
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)	
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data, Receipt.date <= form.end.data).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)	
 				else:
-					#import pdb; pdb.set_trace();
 					user = User.query.filter_by(username=form.user.data).first()
 					if form.begin.data is None and form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
-							#import pdb; pdb.set_trace();
+							receipts = scope.filter( Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.end.data = ' '
 					elif form.begin.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 					elif form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.end.data = ' '
 					else:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= form.begin.data, Receipt.date <= form.end.data, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=1, error_out=True)
 				return render_template('receipts_izlaz_storno.html', title='Stornirane Otpremnice', form=form, receipts=receipts, search=form.search.data, begin=form.begin.data, end=form.end.data, lista=lista, lista2=lista2, user=form.user.data, st=form.storno.data, page=1)
 			else:
 				if user is None:
 					form.user.data=" "
 					if form.begin.data is None and form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.end.data = ' '
 						form.user.data=' '
 					elif form.begin.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter( Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.user.data=' '
 					elif form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= form.begin.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter( Receipt.storno_date >= form.begin.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= form.begin.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= form.begin.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.end.data = ' '
 						form.user.data=' '
 					else:
 						form.user.data=' '
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter( Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)	
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)	
 				else:
-					#import pdb; pdb.set_trace();
 					user = User.query.filter_by(username=form.user.data).first()
 
 					if form.begin.data is None and form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(  Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 						form.end.data = ' '
 					elif form.begin.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter( Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.begin.data = ' '
 					elif form.end.data is None:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter( Receipt.storno_date >= form.begin.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= form.begin.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 						form.end.data = ' '
 					else:
 						if form.search.data == "" or form.search.data == " ":
-							receipts = Receipt.query.filter(Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter( Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 							form.search.data= " "
 						else:
-							receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
+							receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= form.begin.data, Receipt.storno_date <= form.end.data, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=1, error_out=True)
 				return render_template('receipts_izlaz_storno.html', title='Stornirane Otpremnice', form=form, receipts=receipts, search=form.search.data, begin=form.begin.data, end=form.end.data, lista=lista, lista2=lista2, user=form.user.data, st=form.storno.data, page=1)
-		#import pdb; pdb.set_trace();
 		return redirect(url_for('receipts_izlaz_storno1'))
 	if st=='aktivni':
-		if not is_query(s):
-			if not is_query(u):
-				if not is_query(b) and not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+		if not is_product_query_present(s):
+			if not is_user_query_present(u):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+					receipts = scope.order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_begin_date_query_present(b):
+					receipts = scope.filter(Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.date <=e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+					receipts = scope.filter(Receipt.date >= b, Receipt.date <=e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if not is_query(b) and not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_begin_date_query_present(b):
+					receipts = scope.filter(Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.date <=e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+					receipts = scope.filter(Receipt.date >= b, Receipt.date <=e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 		elif not form.submit.data:
 			tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
-			if not is_query(u):
-				if not is_query(b) and not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			if not is_user_query_present(u):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, ).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_begin_date_query_present(b):
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= b, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_izlaz_storno.html', title='Stornirane Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if not is_query(b) and not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_begin_date_query_present(b):
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.date >= b, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_izlaz_storno.html', title='Stornirane Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 	else:
-		if not is_query(s):
-			if not is_query(u):
-				if not is_query(b) and not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+		if not is_product_query_present(s):
+			if not is_user_query_present(u):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+					scope.order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_begin_date_query_present(b):
+					receipts = scope.filter(Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.storno_date >= b).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <=e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+					receipts = scope.filter(Receipt.storno_date >= b, Receipt.storno_date <=e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if not is_query(b) and not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_begin_date_query_present(b):
+					receipts = scope.filter(Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.storno_date >= b, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
-					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <=e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+					receipts = scope.filter(Receipt.storno_date >= b, Receipt.storno_date <=e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 		elif not form.submit.data:
 			tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
-			if not is_query(u):
-				if not is_query(b) and not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+			if not is_user_query_present(u):
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+					receipts = scope.filter( Receipt.receipt_tvrtka==tvrtka.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_begin_date_query_present(b):
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= b).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= b, Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_izlaz_storno.html', title='Stornirane Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if not is_query(b) and not is_query(e):
-					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(b):
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif not is_query(e):
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				if not is_begin_date_query_present(b) and not is_end_date_query_present(e):
+					receipts = scope.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_begin_date_query_present(b):
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+				elif not is_end_date_query_present(e):
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= b, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
-					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
+					receipts = scope.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.storno_date >= b, Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_izlaz_storno.html', title='Stornirane Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
-	
 	
 	return render_template('receipts_izlaz_storno.html', title='Stornirane Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 
