@@ -11,7 +11,9 @@ import pdfkit
 from flask_paginate import Pagination, get_page_parameter, get_page_args
 from sqlalchemy import text
 import os, json
-#from flask_weasyprint import HTML, render_pdf
+
+def is_query(arg):
+	return arg!=" "
 
 config = pdfkit.configuration(wkhtmltopdf="C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe")
 
@@ -155,7 +157,7 @@ def stanje_skladista(page_num, s):
 	for proizvod in sviProizvodi:
 		lista.append(proizvod.name)
 	
-	if s == ' ':
+	if not is_query(s):
 		proizvodi = Proizvod.query.order_by(Proizvod.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 	elif not form.submit.data:
 		proizvodi2 = Proizvod.query.filter(Proizvod.name.like("%" + s + "%")).paginate(per_page=3, page=page_num, error_out=True)
@@ -175,7 +177,6 @@ def stanje_skladista(page_num, s):
 		if form2.validate_on_submit():
 			proizvod = Proizvod(name=form2.name.data, opis_proizvoda=form2.opis_proizvoda.data, zemlja_podrijetla=form2.zemlja_podrijetla.data)
 			barkod = str(form2.barkod.data)
-			#import pdb; pdb.set_trace();
 			if barkod[0] == '0':
 				proizvod.bar_kod='leadingZero'+form2.barkod.data
 			else:
@@ -204,7 +205,7 @@ def tvrtke(page_num, s):
 	for tvrtka in sve_tvrtke:
 		lista.append(tvrtka.name)
 
-	if s == ' ':
+	if not is_query(s):
 		tvrtke = Tvrtka.query.order_by(Tvrtka.name).paginate(per_page=5, page=page_num, error_out=True)
 		
 	elif not form2.submit2.data:
@@ -263,7 +264,7 @@ def svi_korisnici(page_num, s):
 	sviKorisnici = User.query.all()
 	for korisnik in sviKorisnici:
 		lista.append(korisnik.username)
-	if s == ' ':
+	if not is_query(s):
 		svi_korisnici = User.query.order_by(User.username.desc()).paginate(per_page=7, page=page_num, error_out=True)
 		
 	elif not form.submit.data:
@@ -294,46 +295,46 @@ def evidencija_unosa(page_num, s, b, e, u):
 	sviUseri = User.query.all()
 	for user in sviUseri:
 		lista2.append(user.username)
-	if s == ' ':
-		if u==' ':
-			if b ==' ' and e==' ':
+	if not is_query(s):
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				evidencija = Evidencija.query.filter_by(vrsta_unosa='unos').order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e==' ':
+			elif not is_query(e):
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if b ==' ' and e==' ':
+			if not is_query(b) and not is_query(e):
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e==' ':
+			elif not is_query(e):
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 	elif not form.submit.data:
 		proizvod = Proizvod.query.filter(Proizvod.name.like("%" + s + "%")).first()
-		if u == ' ':
-			if b ==' ' and e==' ':
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				evidencija = Evidencija.query.filter( Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos").order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e ==' ':
+			elif not is_query(e):
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('evidencija_unosa.html', title='Evidencija unosa', form=form, evidencija=evidencija, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if b ==' ' and e==' ':
+			if not is_query(b) and not is_query(e):
 				evidencija = Evidencija.query.filter( Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e ==' ':
+			elif not is_query(e):
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=="unos", Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
@@ -438,46 +439,46 @@ def evidencija_izdavanja(page_num, s, b, e, u):
 	sviUseri = User.query.all()
 	for user in sviUseri:
 		lista2.append(user.username)
-	if s == ' ':
-		if u==' ':
-			if b ==' ' and e==' ':
+	if not is_query(s):
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				evidencija = Evidencija.query.filter_by(vrsta_unosa='izlaz').order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e==' ':
+			elif not is_query(e):
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if b ==' ' and e==' ':
+			if not is_query(b) and not is_query(e):
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e==' ':
+			elif not is_query(e):
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				evidencija = Evidencija.query.filter( Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.datum_unosa <=e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 	elif not form.submit.data:
 		proizvod = Proizvod.query.filter(Proizvod.name.like("%" + s + "%")).first()
-		if u == ' ':
-			if b ==' ' and e==' ':
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				evidencija = Evidencija.query.filter( Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz').order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e ==' ':
+			elif not is_query(e):
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('evidencija_izdavanja.html', title='Evidencija izdavanja', form=form, evidencija=evidencija, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if b ==' ' and e==' ':
+			if not is_query(b) and not is_query(e):
 				evidencija = Evidencija.query.filter( Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e ==' ':
+			elif not is_query(e):
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				evidencija = Evidencija.query.filter(Evidencija.proizvod_id==proizvod.id, Evidencija.vrsta_unosa=='izlaz', Evidencija.datum_unosa >= b, Evidencija.datum_unosa <= e, Evidencija.user_id==user.id).order_by(Evidencija.datum_unosa.desc()).paginate(per_page=3, page=page_num, error_out=True)
@@ -624,41 +625,41 @@ def export_stanje_skladista():
 @app.route('/export_proizvod_unos/<s>+<b>+<e>+<u>')
 @login_required
 def export_proizvod_unos(s, b, e, u):
-	if s== " ":
-		if u== " ":
-			if b==" " and e==" ":
+	if not is_query(s):
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.vrsta_unosa="unos" AND receipt.status="active"')
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(b, e))
 		else:
-			if b==" " and e==" ":
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  user.username= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(u))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  user.username= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(u, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  user.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(u, b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  user.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(u, b, e))
 	else:
-		if u== " ":
-			if b==" " and e==" ":
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(s))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(s, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(s, b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(s, b, e))
 		else:
-			if b==" " and e==" ":
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND user.username= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(s, u))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND user.username= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(s, u, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND user.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(s, u, b))				
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND user.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(s, u, b, e))
@@ -682,41 +683,41 @@ def export_proizvod_unos(s, b, e, u):
 @app.route('/export_proizvod_unos_storno/<s>+<b>+<e>+<u>')
 @login_required
 def export_proizvod_unos_storno(s, b, e, u):
-	if s== " ":
-		if u== " ":
-			if b==" " and e==" ":
+	if not is_query(s):
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.vrsta_unosa="unos" AND receipt.status="storno"')
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(b, e))
 		else:
-			if b==" " and e==" ":
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  u.username= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(u))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  u.username= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(u, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  u.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(u, b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  u.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(u, b, e))
 	else:
-		if u== " ":
-			if b==" " and e==" ":
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(s))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(s, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(s, b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(s, b, e))
 		else:
-			if b==" " and e==" ":
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND u.username= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(s, u))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND u.username= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(s, u, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND u.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(s, u, b))				
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Unosa", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND u.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="storno"'.format(s, u, b, e))
@@ -741,41 +742,41 @@ def export_proizvod_unos_storno(s, b, e, u):
 @app.route('/export_proizvod_izlaz/<s>+<b>+<e>+<u>')
 @login_required
 def export_proizvod_izlaz(s, b, e, u):
-	if s== " ":
-		if u== " ":
-			if b==" " and e==" ":
+	if not is_query(s):
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.vrsta_unosa="izlaz" AND receipt.status="active"')
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(b, e))
 		else:
-			if b==" " and e==" ":
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  user.username= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(u))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  user.username= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(u, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  user.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(u, b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  user.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(u, b, e))
 	else:
-		if u== " ":
-			if b==" " and e==" ":
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(s))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(s, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(s, b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="unos" AND receipt.status="active"'.format(s, b, e))
 		else:
-			if b==" " and e==" ":
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND user.username= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(s, u))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND user.username= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(s, u, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND user.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(s, u, b))				
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, user.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user ON evidencija.user_id=user.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND user.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="active"'.format(s, u, b, e))
@@ -799,41 +800,41 @@ def export_proizvod_izlaz(s, b, e, u):
 @app.route('/export_proizvod_izlaz_storno/<s>+<b>+<e>+<u>')
 @login_required
 def export_proizvod_izlaz_storno(s, b, e, u):
-	if s== " ":
-		if u== " ":
-			if b==" " and e==" ":
+	if not is_query(s):
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"')
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(b, e))
 		else:
-			if b==" " and e==" ":
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  u.username= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(u))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  u.username= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(u, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  u.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(u, b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  u.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(u, b, e))
 	else:
-		if u== " ":
-			if b==" " and e==" ":
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(s))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(s, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(s, b))
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(s, b, e))
 		else:
-			if b==" " and e==" ":
+			if not is_query(b) and not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND u.username= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(s, u))
-			elif b==" ":
+			elif not is_query(b):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND u.username= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(s, u, e))
-			elif e==" ":
+			elif not is_query(e):
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND u.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(s, u, b))				
 			else:
 				sql= text('SELECT evidencija.datum_unosa AS "Datum Izdavanja", evidencija.promijenjena_kolicina AS "Promijenjena Kolicina", proizvod.name AS Proizvod, proizvod.id AS "ID Proizvoda", tvrtka.name AS Tvrtka, u.username AS Korisnik, receipt.id AS "ID Racuna", receipt.status AS "Status", receipt.storno_date AS "Datum Storniranja", s.username AS "Stornirao" FROM evidencija INNER JOIN proizvod ON evidencija.proizvod_id=proizvod.id INNER JOIN tvrtka ON evidencija.tvrtka_id=tvrtka.id INNER JOIN user u ON evidencija.user_id=u.id INNER JOIN user s ON receipt.storno_user=s.id INNER JOIN receipt ON evidencija.receipt_id=receipt.id WHERE  proizvod.name= "{}" AND u.username= "{}" AND evidencija.datum_unosa >= "{}" AND evidencija.datum_unosa <= "{}" AND evidencija.vrsta_unosa="izlaz" AND receipt.status="storno"'.format(s, u, b, e))
@@ -1073,46 +1074,46 @@ def receipts_unosa(page_num, s, b, e, u):
 	sviUseri = User.query.all()
 	for user in sviUseri:
 		lista2.append(user.username)
-	if s == ' ':
-		if u==' ':
-			if b ==' ' and e==' ':
+	if not is_query(s):
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e==' ':
+			elif not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.date <=e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if b ==' ' and e==' ':
+			if not is_query(b) and not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e==' ':
+			elif not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.date <=e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 	elif not form.submit.data:
 		tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
-		if u == ' ':
-			if b ==' ' and e==' ':
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e ==' ':
+			elif not is_query(e):
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('receipts_unosa.html', title='Primke', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if b ==' ' and e==' ':
+			if not is_query(b) and not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e ==' ':
+			elif not is_query(e):
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='active', Receipt.date >= b, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
@@ -1222,46 +1223,46 @@ def receipts_izlaz(page_num, s, b, e, u):
 	sviUseri = User.query.all()
 	for user in sviUseri:
 		lista2.append(user.username)
-	if s == ' ':
-		if u==' ':
-			if b ==' ' and e==' ':
+	if not is_query(s):
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e==' ':
+			elif not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.date <=e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if b ==' ' and e==' ':
+			if not is_query(b) and not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e==' ':
+			elif not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.date <=e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 	elif not form.submit.data:
 		tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
-		if u == ' ':
-			if b ==' ' and e==' ':
+		if not is_query(u):
+			if not is_query(b) and not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e ==' ':
+			elif not is_query(e):
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			return render_template('receipts_izlaz.html', title='Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, lista=lista, lista2=lista2)
 		else:
 			user = User.query.filter_by(username=u).first()
-			if b ==' ' and e==' ':
+			if not is_query(b) and not is_query(e):
 				receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif b ==' ':
+			elif not is_query(b):
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-			elif e ==' ':
+			elif not is_query(e):
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='active', Receipt.date >= b, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
@@ -1527,68 +1528,68 @@ def receipts_unosa_storno(page_num, s, b, e, u, st):
 		#import pdb; pdb.set_trace();
 		return redirect(url_for('receipts_unosa_storno1'))
 	if st=='aktivni':
-		if s == ' ':
-			if u==' ':
-				if b ==' ' and e==' ':
+		if not is_query(s):
+			if not is_query(u):
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.date <=e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if b ==' ' and e==' ':
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.date <=e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 		elif not form.submit.data:
 			tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
-			if u == ' ':
-				if b ==' ' and e==' ':
+			if not is_query(u):
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e ==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_unosa_storno.html', title='Stornirane Primke', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if b ==' ' and e==' ':
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e ==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.date >= b, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_unosa_storno.html', title='Stornirane Primke', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 	else:
-		if s == ' ':
-			if u==' ':
-				if b ==' ' and e==' ':
+		if not is_query(s):
+			if not is_query(u):
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <=e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if b ==' ' and e==' ':
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <=e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
@@ -1596,24 +1597,24 @@ def receipts_unosa_storno(page_num, s, b, e, u, st):
 		elif not form.submit.data:
 			tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
 			#import pdb; pdb.set_trace()
-			if u == ' ':
-				if b ==' ' and e==' ':
+			if not is_query(u):
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e ==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_unosa_storno.html', title='Stornirane Primke', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if b ==' ' and e==' ':
+				if not is_query(b) and not is_query(e):
 
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e ==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='unos', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
@@ -1796,91 +1797,91 @@ def receipts_izlaz_storno(page_num, s, b, e, u, st):
 		#import pdb; pdb.set_trace();
 		return redirect(url_for('receipts_izlaz_storno1'))
 	if st=='aktivni':
-		if s == ' ':
-			if u==' ':
-				if b ==' ' and e==' ':
+		if not is_query(s):
+			if not is_query(u):
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.date <=e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if b ==' ' and e==' ':
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.date <=e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 		elif not form.submit.data:
 			tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
-			if u == ' ':
-				if b ==' ' and e==' ':
+			if not is_query(u):
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e ==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.date <= e).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_izlaz_storno.html', title='Stornirane Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if b ==' ' and e==' ':
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e ==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.date >= b, Receipt.date <= e, Receipt.receipt_user==user.id).order_by(Receipt.date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_izlaz_storno.html', title='Stornirane Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 	else:
-		if s == ' ':
-			if u==' ':
-				if b ==' ' and e==' ':
+		if not is_query(s):
+			if not is_query(u):
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <=e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if b ==' ' and e==' ':
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter( Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <=e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 
 		elif not form.submit.data:
 			tvrtka=Tvrtka.query.filter(Tvrtka.name.like("%"+s+"%")).first()
-			if u == ' ':
-				if b ==' ' and e==' ':
+			if not is_query(u):
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno').order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e ==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <= e).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				return render_template('receipts_izlaz_storno.html', title='Stornirane Otpremnice', form=form, receipts=receipts, search=s, begin=b, end=e, user=u, st=st, lista=lista, lista2=lista2)
 			else:
 				user = User.query.filter_by(username=u).first()
-				if b ==' ' and e==' ':
+				if not is_query(b) and not is_query(e):
 					receipts = Receipt.query.filter( Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif b ==' ':
+				elif not is_query(b):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
-				elif e ==' ':
+				elif not is_query(e):
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
 				else:
 					receipts = Receipt.query.filter(Receipt.receipt_tvrtka==tvrtka.id, Receipt.receipt_type=='izlaz', Receipt.status=='storno', Receipt.storno_date >= b, Receipt.storno_date <= e, Receipt.storno_user==user.id).order_by(Receipt.storno_date.desc()).paginate(per_page=3, page=page_num, error_out=True)
