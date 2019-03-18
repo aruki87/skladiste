@@ -236,6 +236,11 @@ def tvrtke(page_num, s):
 			return render_template('tvrtke.html', title='Tvrtke', tvrtke=tvrtke, form=form, form2= form2, search=' ', lista=lista, form_error=form_error)
 	return render_template('tvrtke.html', title='Tvrtke', tvrtke=tvrtke, form=form, form2= form2, search=' ', lista=lista)
 
+@app.route('/tvrtke1', methods=['GET', 'POST'])
+@login_required
+def tvrtke1():
+	return redirect(url_for('tvrtke', page_num=1, s=' '))
+
 @app.route('/tvrtka/<name>', methods=['GET', 'POST'])
 @login_required
 def tvrtka(name):
@@ -255,11 +260,6 @@ def tvrtka(name):
 			flash(f'Uspješno ste izmijenili podatke tvrtke {form_uredi.name.data}!')
 			return redirect(url_for('tvrtka', name=tvrtka.name))		
 	return render_template('tvrtka.html', user=user, tvrtka=tvrtka, form_uredi=form_uredi)
-
-@app.route('/tvrtke1', methods=['GET', 'POST'])
-@login_required
-def tvrtke1():
-	return redirect(url_for('tvrtke', page_num=1, s=' '))
 
 @app.route('/svi_korisnici/<int:page_num>+<s>', methods=['GET', 'POST'])
 @login_required
