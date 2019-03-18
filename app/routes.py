@@ -93,22 +93,6 @@ def before_request():
 		current_user.last_seen = datetime.utcnow()
 		db.session.commit()
 
-@app.route('/unos_proizvoda', methods=['GET', 'POST'])
-@login_required
-def unos_proizvoda():
-	form = UnosProizvodaForm()
-	if form.submit.data:
-		return redirect(url_for('stanje_skladista', page_num=1, s=' '))
-	while form.dodaj_jos.data:
-		proizvod = Proizvod.query.filter_by(name=form.name.data).first()
-		proizvod.kolicina += form.promijenjena_kolicina.data
-		tvrtka = Tvrtka.query.filter_by(oib=form.oib.data).first()
-		evidencija = Evidencija(proizvod_id=proizvod.id, promijenjena_kolicina=form.promijenjena_kolicina.data, tvrtka_id=tvrtka.id, user_id=current_user.id, vrsta_unosa='unos', trenutna_kolicina=proizvod.kolicina)
-		db.session.add(evidencija)
-		db.session.commit()
-		flash(f'Dodali ste proizvod {form.name.data}!', 'success')
-		return redirect(url_for('unos_proizvoda'))
-	return render_template('unos_proizvoda.html', title='Dodaj proizvod', form=form)
 
 @app.route('/proizvod/<name>', methods=['GET', 'POST'])
 @login_required
